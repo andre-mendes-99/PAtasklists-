@@ -2,33 +2,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define MAX_TASKS 10
+#include "../utils/list.h"
 
 struct TaskList_ {
-    Task tasks[MAX_TASKS];
-    int num_tasks;
+    List tasks;
 };
 
 TaskList task_list_new() {
     TaskList task_list = malloc(sizeof(struct TaskList_));
-    task_list->num_tasks = 0;
-    for (int i = 0; i < MAX_TASKS; i++) {
-        task_list->tasks[i] = NULL;
-    }
+    task_list->tasks = list_create();
     return task_list;
 }
 
 void task_list_destroy(TaskList task_list) {
-    for (int i = 0; i < task_list->num_tasks; i++) {
-        task_destroy(task_list->tasks[i]);
-    }
+    list_destroy(task_list->tasks, NULL);
     free(task_list);
 }
 
 char* _generate_id(TaskList task_list) {
     char* id = malloc(sizeof(char) * 10);
-    sprintf(id, "%d", task_list->num_tasks);
+    sprintf(id, "%d", list_size(task_list->tasks));
     return id;
 }
 
@@ -36,23 +29,25 @@ char* task_list_add_task(TaskList task_list, char* description) {
     char* id = _generate_id(task_list);
     Task task = task_new(id, description);
     free(id);
-    task_list->tasks[task_list->num_tasks] = task;
-    task_list->num_tasks++;
+    list_insert_last(task_list->tasks, task);
     return task_get_id(task);
 }
 
+bool equal_tasks(void* e1, void* e2) {
+    Task t1 = (Task)e1;
+    Task t2 = (Task)e2;
+    return task_get_id(t1) == task_get_id(t2);
+}
+
 void task_list_complete_task(TaskList task_list, char* id) {
-    for (int i = 0; i < task_list->num_tasks; i++) {
-        char* task_id = task_get_id(task_list->tasks[i]);
-        if (strcmp(task_id, id) == 0) {
-            task_set_completed(task_list->tasks[i]);
-            break;
-        }
-    }
+    Task temp_task = task_new(id, NULL);
+    int pos = list_find(task_list->tasks, equal_tasks, temp_task);
+    Task task = list_get(task_list->tasks, pos);
+    task_set_completed(task);
 }
 
 int task_list_get_num_tasks(TaskList task_list) {
-    return task_list->num_tasks;
+    return list_size(task_list->tasks);
 }
 
 Task* task_list_get_tasks(TaskList task_list) {
